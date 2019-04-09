@@ -1,50 +1,38 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
-	"os"
-	"runtime"
-
-	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
+type Translation struct {
+	Side1 string `json:"side1"`
+	Side2 string `json:"side2"`
+}
+
 func main() {
-	ConfigRuntime()
-	StartWorkers()
-	StartGin()
+	http.HandleFunc("/", handleMainRoute)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-// ConfigRuntime sets the number of operating system threads.
-func ConfigRuntime() {
-	nuCPU := runtime.NumCPU()
-	runtime.GOMAXPROCS(nuCPU)
-	fmt.Printf("Running with %d CPUs\n", nuCPU)
-}
-
-// StartWorkers start starsWorker by goroutine.
-func StartWorkers() {
-	go statsWorker()
-}
-
-// StartGin starts gin web server with setting router.
-func StartGin() {
-	gin.SetMode(gin.ReleaseMode)
-
-	router := gin.New()
-	router.Use(rateLimit, gin.Recovery())
-	router.LoadHTMLGlob("resources/*.templ.html")
-	router.Static("/static", "resources/static")
-	router.GET("/", index)
-	router.GET("/room/:roomid", roomGET)
-	router.POST("/room-post/:roomid", roomPOST)
-	router.GET("/stream/:roomid", streamRoom)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+func handleMainRoute(w http.ResponseWriter, r *http.Request) {
+	translations := []Translation{
+		{
+			Side1: "Tierra",
+			Side2: "Land",
+		},
+		{
+			Side1: "Agua",
+			Side2: "Water",
+		},
 	}
-	if err := router.Run(":" + port); err != nil {
-        log.Panicf("error: %s", err)
+
+	// Set Content-Type to application/json
+	w.Header().Set("Content-Type", "application/json")
+
+	// Encode and send the response
+	if err := json.NewEncoder(w).Encode(translations); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }
